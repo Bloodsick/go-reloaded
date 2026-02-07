@@ -26,14 +26,25 @@ func ProcessTags(words []string) []string {
 					base = 2
 				}
 
-				lastIdx := len(result) - 1
-				//Strip punctuation from the value before parsing (e.g., "1E," -> "1E").
-				cleanVal := strings.TrimFunc(result[lastIdx], func(r rune) bool {
-					return !unicode.IsDigit(r) && !unicode.IsLetter(r)
-				})
+				// We look backwards to find a valid word to convert.
+				targetIdx := -1
+				for j := len(result) - 1; j >= 0; j-- {
+					if !IsPunctuation(result[j]) {
+						targetIdx = j
+						break
+					}
+				}
 
-				if val, err := strconv.ParseInt(cleanVal, base, 64); err == nil {
-					result[lastIdx] = fmt.Sprint(val)
+				// If we found a valid word to convert.
+				if targetIdx != -1 {
+					// Strip punctuation from the value before parsing.
+					cleanVal := strings.TrimFunc(result[targetIdx], func(r rune) bool {
+						return !unicode.IsDigit(r) && !unicode.IsLetter(r)
+					})
+
+					if val, err := strconv.ParseInt(cleanVal, base, 64); err == nil {
+						result[targetIdx] = fmt.Sprint(val)
+					}
 				}
 			}
 			continue
@@ -53,34 +64,28 @@ func ProcessTags(words []string) []string {
 		}
 
 		count := 1
+		argIdx := i + 1
 
-		//The tag is strictly split like ["(up", ",", "2)"]
-		//This happens because SeparatePunctuation ran first.
-		if word != "(up)" && word != "(low)" && word != "(cap)" && i+2 < len(words) {
-			nextWord := words[i+1]
-			numberWord := words[i+2]
-
-			if nextWord == "," {
-				// We found the comma, now try to parse the number.
-				cleanNum := strings.TrimFunc(numberWord, func(r rune) bool {
-					return !unicode.IsDigit(r)
-				})
-
-				if val, err := strconv.Atoi(cleanNum); err == nil {
-					count = val
-					i += 2 //Skip the comma and the number.
-				}
-			}
+		// Skip the comma if it's separated.
+		if argIdx < len(words) && words[argIdx] == "," {
+			argIdx++
 		}
 
-		if strings.HasSuffix(word, ",") && i+1 < len(words) {
-			nextWord := words[i+1]
-			cleanNum := strings.TrimFunc(nextWord, func(r rune) bool {
+		// Parse the number argument.
+		if argIdx < len(words) {
+			argWord := words[argIdx]
+			cleanNum := strings.TrimFunc(argWord, func(r rune) bool {
 				return !unicode.IsDigit(r)
 			})
-			if val, err := strconv.Atoi(cleanNum); err == nil {
+
+			if val, err := strconv.Atoi(cleanNum); err == nil && val > 0 {
 				count = val
-				i += 1 //Skip the number used as an argument.
+				i = argIdx // Advance main loop to the number.
+
+				// Consume trailing ')' if it's separated.
+				if i+1 < len(words) && words[i+1] == ")" {
+					i++
+				}
 			}
 		}
 
@@ -95,6 +100,19 @@ func ProcessTags(words []string) []string {
 	}
 
 	return result
+}
+
+// Helper function to check if the string only has punctuation characters.
+func IsPunctuation(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, r := range s {
+		if !strings.ContainsRune(",.!?:;\"'()", r) {
+			return false
+		}
+	}
+	return true
 }
 
 // Helper for Capitalize
