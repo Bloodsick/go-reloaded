@@ -130,7 +130,7 @@ func IsContraction(words []string, i int) bool {
 	if strings.ContainsAny(prevWord, ",.!?:;\"'") || strings.ContainsAny(nextWord, ",.!?:;\"'") {
 		return false
 	}
-	// Checking if is
+	// Checking if the next word matches any words that are used for contraction.
 	switch strings.ToLower(nextWord) {
 	case "t", "s", "d", "m", "ll", "re", "ve":
 		return true
@@ -139,15 +139,18 @@ func IsContraction(words []string, i int) bool {
 	}
 }
 
+// This function searches and changes incorrect indefinite articles.
 func IndefiniteArticle(word, nextword string) string {
 	lowerword := strings.ToLower(word)
 	if lowerword != "a" && lowerword != "an" {
 		return word
 	}
+	// If there is no next word then there is no need to change it.
 	if len(nextword) == 0 {
 		return word
 	}
 
+	// Calling a helper function to check if the next word has a vowel sound.
 	isVowel := HasVowelSound(nextword)
 
 	if lowerword == "a" && isVowel {
@@ -165,6 +168,7 @@ func IndefiniteArticle(word, nextword string) string {
 	return word
 }
 
+// Helper function for indefinite article, looks for some edge cases too.
 func HasVowelSound(word string) bool {
 	lowerword := strings.ToLower(word)
 	firstChar := lowerword[0]
@@ -183,19 +187,27 @@ func HasVowelSound(word string) bool {
 		}
 		return true
 	case 'u':
-		if strings.HasPrefix(lowerword, "uni") {
-			if strings.HasPrefix(lowerword, "unim") || strings.HasPrefix(lowerword, "unin") {
-				return true
+		consonantSoundU := []string{"uni", "use", "usa", "usu", "ute"}
+		vowelSoundUni := []string{"unid", "unim", "unin", "unip", "uniq"}
+
+		isConsonant := false
+		for _, c := range consonantSoundU {
+			if strings.HasPrefix(lowerword, c) {
+				isConsonant = true
+				break
 			}
-			return false
 		}
-		if strings.HasPrefix(lowerword, "use") || strings.HasPrefix(lowerword, "urb") {
-			if strings.HasPrefix(lowerword, "urb") {
-				return true
+
+		if isConsonant {
+			// Check if it's actually one of the "unidentified" cases.
+			for _, v := range vowelSoundUni {
+				if strings.HasPrefix(lowerword, v) {
+					return true
+				}
 			}
-			return false
+			return false // It is a consonant sound (Unique, University).
 		}
-		return true
+		return true // Default 'u' is vowel (Umbrella, Ugly).
 	case 'h':
 		if strings.HasPrefix(lowerword, "honest") ||
 			strings.HasPrefix(lowerword, "hour") ||
