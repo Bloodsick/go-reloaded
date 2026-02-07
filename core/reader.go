@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // Returns a formatted way of errors that may occur.
@@ -48,13 +49,21 @@ func ReadFile(txt string) ([]string, error) {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	reader := bufio.NewReader(file)
 	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	for {
+		// ReadString reads until the delimiter or end of file (EOF).
+		line, err := reader.ReadString('\n')
+		if err != nil && line == "" { // EOF with empty line.
+			break
+		}
+		// Remove the newline for processing, it will be added back later.
+		line = strings.TrimSuffix(line, "\n")
+		lines = append(lines, line)
+
+		if err != nil { // EOF reached.
+			break
+		}
 	}
 	return lines, nil
 }
